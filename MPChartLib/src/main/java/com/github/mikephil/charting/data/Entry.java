@@ -18,6 +18,7 @@ public class Entry extends BaseEntry implements Parcelable {
 
     /** the x value */
     private float x = 0f;
+    private boolean isValid = true;
 
     public Entry() {
 
@@ -32,6 +33,12 @@ public class Entry extends BaseEntry implements Parcelable {
     public Entry(float x, float y) {
         super(y);
         this.x = x;
+    }
+
+    public Entry(float x, float y, boolean isValid) {
+        super(y);
+        this.x = x;
+        this.isValid = isValid;
     }
 
     /**
@@ -87,6 +94,14 @@ public class Entry extends BaseEntry implements Parcelable {
      */
     public void setX(float x) {
         this.x = x;
+    }
+
+    public boolean isValid() {
+        return isValid;
+    }
+
+    public void setValid(boolean valid) {
+        isValid = valid;
     }
 
     /**

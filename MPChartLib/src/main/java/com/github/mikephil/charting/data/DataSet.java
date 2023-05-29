@@ -314,7 +314,10 @@ public abstract class DataSet<T extends Entry> extends BaseDataSet<T> {
 
     @Override
     public T getEntryForIndex(int index) {
-        return mEntries.get(index);
+        if (index >= 0 && index < mEntries.size()) {
+            return mEntries.get(index);
+        }
+        return null;
     }
 
     @Override
@@ -327,7 +330,7 @@ public abstract class DataSet<T extends Entry> extends BaseDataSet<T> {
         int high = mEntries.size() - 1;
         int closest = high;
 
-        while (low < high) {
+        while (low < high) { // 二分法
             int m = (low + high) / 2;
 
             final float d1 = mEntries.get(m).getX() - xValue,

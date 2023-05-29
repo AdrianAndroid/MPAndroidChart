@@ -59,25 +59,25 @@ public abstract class BarLineScatterCandleBubbleRenderer extends DataRenderer {
     protected class XBounds {
 
         /**
-         * minimum visible entry index
+         * minimum visible entry index (索引坐标)
          */
         public int min;
 
         /**
-         * maximum visible entry index
+         * maximum visible entry index (索引坐标)
          */
         public int max;
 
         /**
-         * range of visible entry indices
+         * range of visible entry indices (索引个数)
          */
         public int range;
 
         /**
          * Calculates the minimum and maximum x values as well as the range between them.
          *
-         * @param chart
-         * @param dataSet
+         * @param chart LineChart
+         * @param dataSet DataSet集合
          */
         public void set(BarLineScatterCandleBubbleDataProvider chart, IBarLineScatterCandleBubbleDataSet dataSet) {
             float phaseX = Math.max(0.f, Math.min(1.f, mAnimator.getPhaseX()));

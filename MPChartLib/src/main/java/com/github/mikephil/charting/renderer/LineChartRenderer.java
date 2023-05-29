@@ -262,22 +262,15 @@ public class LineChartRenderer extends LineRadarRenderer {
     }
 
     protected void drawCubicFill(Canvas c, ILineDataSet dataSet, Path spline, Transformer trans, XBounds bounds) {
-
-        float fillMin = dataSet.getFillFormatter()
-                .getFillLinePosition(dataSet, mChart);
-
+        float fillMin = dataSet.getFillFormatter().getFillLinePosition(dataSet, mChart);
         spline.lineTo(dataSet.getEntryForIndex(bounds.min + bounds.range).getX(), fillMin);
         spline.lineTo(dataSet.getEntryForIndex(bounds.min).getX(), fillMin);
         spline.close();
-
         trans.pathValueToPixel(spline);
-
         final Drawable drawable = dataSet.getFillDrawable();
         if (drawable != null) {
-
             drawFilledPath(c, spline, drawable);
         } else {
-
             drawFilledPath(c, spline, dataSet.getFillColor(), dataSet.getFillAlpha());
         }
     }
