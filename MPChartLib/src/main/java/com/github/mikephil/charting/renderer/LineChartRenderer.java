@@ -455,7 +455,7 @@ public class LineChartRenderer extends LineRadarRenderer {
         do {
             currentStartIndex = startingIndex + (iterations * indexInterval);
             currentEndIndex = currentStartIndex + indexInterval;
-            currentEndIndex = currentEndIndex > endingIndex ? endingIndex : currentEndIndex;
+            currentEndIndex = Math.min(currentEndIndex, endingIndex);
 
             if (currentStartIndex <= currentEndIndex) {
                 generateFilledPath(dataSet, currentStartIndex, currentEndIndex, filled);
@@ -505,16 +505,14 @@ public class LineChartRenderer extends LineRadarRenderer {
         Entry currentEntry = null;
         Entry previousEntry = entry;
         for (int x = startIndex + 1; x <= endIndex; x++) {
-
             currentEntry = dataSet.getEntryForIndex(x);
-
-            if (isDrawSteppedEnabled) {
-                filled.lineTo(currentEntry.getX(), previousEntry.getY() * phaseY);
+            if (currentEntry.isValid() || x == endIndex) {
+                if (isDrawSteppedEnabled) {
+                    filled.lineTo(currentEntry.getX(), previousEntry.getY() * phaseY);
+                }
+                filled.lineTo(currentEntry.getX(), currentEntry.getY() * phaseY);
+                previousEntry = currentEntry;
             }
-
-            filled.lineTo(currentEntry.getX(), currentEntry.getY() * phaseY);
-
-            previousEntry = currentEntry;
         }
 
         // close up
@@ -604,12 +602,12 @@ public class LineChartRenderer extends LineRadarRenderer {
     /**
      * cache for the circle bitmaps of all datasets
      */
-    private HashMap<IDataSet, DataSetImageCache> mImageCaches = new HashMap<>();
+    protected HashMap<IDataSet, DataSetImageCache> mImageCaches = new HashMap<>();
 
     /**
      * buffer for drawing the circles
      */
-    private float[] mCirclesBuffer = new float[2];
+    protected float[] mCirclesBuffer = new float[2];
 
     protected void drawCircles(Canvas c) {
 
@@ -755,7 +753,7 @@ public class LineChartRenderer extends LineRadarRenderer {
         }
     }
 
-    private class DataSetImageCache {
+    public class DataSetImageCache {
 
         private Path mCirclePathBuffer = new Path();
 
@@ -767,7 +765,7 @@ public class LineChartRenderer extends LineRadarRenderer {
          * @param set
          * @return
          */
-        protected boolean init(ILineDataSet set) {
+        public boolean init(ILineDataSet set) {
 
             int size = set.getCircleColorCount();
             boolean changeRequired = false;
@@ -790,7 +788,7 @@ public class LineChartRenderer extends LineRadarRenderer {
          * @param drawCircleHole
          * @param drawTransparentCircleHole
          */
-        protected void fill(ILineDataSet set, boolean drawCircleHole, boolean drawTransparentCircleHole) {
+        public void fill(ILineDataSet set, boolean drawCircleHole, boolean drawTransparentCircleHole) {
 
             int colorCount = set.getCircleColorCount();
             float circleRadius = set.getCircleRadius();
@@ -849,7 +847,7 @@ public class LineChartRenderer extends LineRadarRenderer {
          * @param index
          * @return
          */
-        protected Bitmap getBitmap(int index) {
+        public Bitmap getBitmap(int index) {
             return circleBitmaps[index % circleBitmaps.length];
         }
     }

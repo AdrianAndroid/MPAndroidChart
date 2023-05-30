@@ -66,6 +66,12 @@ public class Line111Activity extends AppCompatActivity {
                 setData(lineChart, new Float[]{50f, 0f, 0f, 40f, 0f, 0f, 40f});
             }
         });
+        findViewById(R.id.btn6).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                setData(lineChart, new Float[]{0f, 10f, 20f, 0f, 0f, 50f, 60f});
+            }
+        });
     }
 
     void initLineChart(LineChart lineChart) {
@@ -128,7 +134,7 @@ public class Line111Activity extends AppCompatActivity {
             lineChart.invalidate();
         } else {
             LineDataSet set = new LineDataSet(values, "");
-            set.setMode(LineDataSet.Mode.CUBIC_BEZIER);
+            set.setMode(LineDataSet.Mode.LINEAR);
             set.setCubicIntensity(0.5f);
             set.setDrawFilled(true);
             //set.setDrawCircles(true) // 肯定是坐标上的小点
@@ -136,7 +142,8 @@ public class Line111Activity extends AppCompatActivity {
             set.setCircleRadius(4f);
             set.setCircleColors(colorsList);
             //set.setCircleColor(Color.rgb(125, 155, 255))
-            set.setDrawCircleHole(false);
+            set.setDrawCircleHole(true);
+            set.setCircleHoleColor(Color.WHITE);
             set.setColor(Color.parseColor("#7D9BFF"));
             set.setFillColor(Color.parseColor("#7D9BFF"));
             //val drawable = ContextCompat.getDrawable(globalApp, R.drawable.shape_trend_gradient_9288ff)

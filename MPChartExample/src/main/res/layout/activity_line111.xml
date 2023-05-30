@@ -17,10 +17,10 @@
         android:id="@+id/lineChart"
         android:layout_width="match_parent"
         android:layout_height="152dp"
-        android:background="#99ff0000"
         android:layout_marginStart="10dp"
         android:layout_marginTop="10dp"
-        android:layout_marginEnd="10dp" />
+        android:layout_marginEnd="10dp"
+        android:background="#99ff0000" />
 
     <com.nex3z.flowlayout.FlowLayout
         android:layout_width="match_parent"
@@ -38,26 +38,37 @@
             android:id="@+id/btn2"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="第一个有效其它无效"/>
+            android:text="第一个有效其它无效" />
 
         <Button
             android:id="@+id/btn3"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="最后一个有效其它无效"/>
+            android:text="最后一个有效其它无效" />
 
         <Button
             android:id="@+id/btn4"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="中间有一个无效"/>
+            android:text="中间有一个无效" />
 
         <Button
             android:id="@+id/btn5"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="中间有两个无效"/>
+            android:text="中间有两个无效" />
+
+        <Button
+            android:id="@+id/btn6"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="简单数据" />
     </com.nex3z.flowlayout.FlowLayout>
 
+
+    <com.xxmassdeveloper.mpchartexample.flannery.BezierCurveView
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:layout_marginTop="300dp" />
 
 </FrameLayout>

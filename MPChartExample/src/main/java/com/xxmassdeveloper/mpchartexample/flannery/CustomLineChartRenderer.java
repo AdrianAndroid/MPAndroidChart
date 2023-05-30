@@ -1,5 +1,6 @@
 package com.xxmassdeveloper.mpchartexample.flannery;
 
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
@@ -10,80 +11,141 @@ import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 import com.github.mikephil.charting.renderer.LineChartRenderer;
+import com.github.mikephil.charting.utils.ColorTemplate;
 import com.github.mikephil.charting.utils.Transformer;
 import com.github.mikephil.charting.utils.ViewPortHandler;
+
+import java.util.List;
 
 /**
  * https://blog.csdn.net/VickyTsai/article/details/90044515
  */
 public class CustomLineChartRenderer extends LineChartRenderer {
-    private final PointF mFirstPointF;
-    private final PointF mLastPointF;
     private final Path mRenderPath;
 
     public CustomLineChartRenderer(LineChart chart, ChartAnimator animator, ViewPortHandler viewPortHandler) {
         super(chart, animator, viewPortHandler);
-        mFirstPointF = new PointF();
-        mLastPointF = new PointF();
+        PointF mFirstPointF = new PointF();
+        PointF mLastPointF = new PointF();
         mRenderPath = new Path();
     }
 
-    @Override
+    private float[] mLineBuffer = new float[4];
+
+    /**
+     * Draws a normal line.
+     *
+     * @param c
+     * @param dataSet
+     */
     protected void drawLinear(Canvas c, ILineDataSet dataSet) {
         int entryCount = dataSet.getEntryCount();
-
-        if (entryCount < 1)
-            return;
-
+        final int pointsPerEntryPair = 2;
         Transformer trans = mChart.getTransformer(dataSet.getAxisDependency());
-
+        float phaseY = mAnimator.getPhaseY();
+        mRenderPaint.setStyle(Paint.Style.STROKE);
+        Canvas canvas = null;
+        // if the data-set is dashed, draw on bitmap-canvas
+        if (dataSet.isDashedLineEnabled()) {
+            canvas = mBitmapCanvas;
+        } else {
+            canvas = c;
+        }
         mXBounds.set(mChart, dataSet);
-
-        Entry entryFirst = dataSet.getEntryForIndex(mXBounds.min);
-        Entry entryLast = dataSet.getEntryForIndex(mXBounds.max);
-
-        int minx = Math.max(mXBounds.min, 0);
-        int maxx = Math.min(mXBounds.max + 1, entryCount);
-
-        // 遍历数据点并绘制线条
-        for (int j = minx; j < maxx; j++) {
-            Entry entry = dataSet.getEntryForIndex(j);
-            if (entry == null)
-                continue;
-
-            float x = entry.getX();
-            float y = entry.getY();
-
-            if (Float.isNaN(y) || y < 0) {
-                if (mRenderPath.isEmpty()) {
-                    mFirstPointF.x = x;
-                    mFirstPointF.y = y;
-                    mRenderPath.moveTo(mFirstPointF.x, mFirstPointF.y);
+        // if drawing filled is enabled
+        if (dataSet.isDrawFilledEnabled() && entryCount > 0) {
+            drawLinearFill(c, dataSet, trans, mXBounds);
+        }
+        // more than 1 color
+        if (dataSet.getColors().size() > 1) {
+            int numberOfFloats = pointsPerEntryPair * 2;
+            if (mLineBuffer.length <= numberOfFloats) {
+                mLineBuffer = new float[numberOfFloats * 2];
+            }
+            int max = mXBounds.min + mXBounds.range;
+            for (int j = mXBounds.min; j < max; j++) {
+                Entry e = dataSet.getEntryForIndex(j);
+                if (e == null) continue;
+                mLineBuffer[0] = e.getX();
+                mLineBuffer[1] = e.getY() * phaseY;
+                if (j < mXBounds.max) {
+                    e = dataSet.getEntryForIndex(j + 1);
+                    if (e == null) break;
+                    mLineBuffer[2] = e.getX();
+                    mLineBuffer[3] = e.getY() * phaseY;
                 } else {
-                    mLastPointF.x = x;
-                    mLastPointF.y = y;
-                    mRenderPath.lineTo(mLastPointF.x, mLastPointF.y);
-                    c.drawPath(mRenderPath, mRenderPaint);
-                    mRenderPath.reset();
-                    mRenderPath.moveTo(mLastPointF.x, mLastPointF.y);
+                    mLineBuffer[2] = mLineBuffer[0];
+                    mLineBuffer[3] = mLineBuffer[1];
                 }
-            } else {
-                if (mRenderPath.isEmpty()) {
-                    mFirstPointF.x = x;
-                    mFirstPointF.y = y;
-                    mRenderPath.moveTo(mFirstPointF.x, mFirstPointF.y);
-                } else {
-                    mLastPointF.x = x;
-                    mLastPointF.y = y;
-                    mRenderPath.lineTo(mLastPointF.x, mLastPointF.y);
+                // Determine the start and end coordinates of the line, and make sure they differ.
+                float firstCoordinateX = mLineBuffer[0];
+                float firstCoordinateY = mLineBuffer[1];
+                float lastCoordinateX = mLineBuffer[numberOfFloats - 2];
+                float lastCoordinateY = mLineBuffer[numberOfFloats - 1];
+
+                if (firstCoordinateX == lastCoordinateX && firstCoordinateY == lastCoordinateY) {
+                    continue;
+                }
+                trans.pointValuesToPixel(mLineBuffer);
+                if (!mViewPortHandler.isInBoundsRight(firstCoordinateX)) {
+                    break;
+                }
+                // make sure the lines don't do shitty things outside
+                // bounds
+                if (!mViewPortHandler.isInBoundsLeft(lastCoordinateX) ||
+                        !mViewPortHandler.isInBoundsTop(Math.max(firstCoordinateY, lastCoordinateY)) ||
+                        !mViewPortHandler.isInBoundsBottom(Math.min(firstCoordinateY, lastCoordinateY))) {
+                    continue;
+                }
+                // get the color that is set for this line-segment
+                mRenderPaint.setColor(dataSet.getColor(j));
+                canvas.drawLines(mLineBuffer, 0, pointsPerEntryPair * 2, mRenderPaint);
+            }
+
+        } else { // only one color per dataset
+            if (mLineBuffer.length < Math.max((entryCount) * pointsPerEntryPair, pointsPerEntryPair) * 2) {
+                mLineBuffer = new float[Math.max((entryCount) * pointsPerEntryPair, pointsPerEntryPair) * 4];
+            }
+            Entry e1, e2;
+            e1 = dataSet.getEntryForIndex(mXBounds.min); // 获取第一个点
+            if (e1 != null) {
+                int j = 0;
+                int startX = mXBounds.min;
+                int endX = mXBounds.range + mXBounds.min;
+                int indexX = startX;
+                while (indexX <= endX) {
+                    if (indexX == 0) {
+                        e1 = dataSet.getEntryForIndex(0);
+                    } else {
+                        do {
+                            e1 = dataSet.getEntryForIndex(indexX == 0 ? 0 : (indexX - 1));
+                            if (e1 != null && !e1.isValid()) {
+                                indexX++;
+                            }
+                        } while (e1 != null && !e1.isValid() && indexX <= endX);
+                    }
+                    do {
+                        e2 = dataSet.getEntryForIndex(indexX);
+                        if (e2 != null && !e2.isValid()) {
+                            indexX++;
+                        }
+                    } while (e2 != null && !e2.isValid() && indexX <= endX);
+                    if (e1 == null || e2 == null) continue;
+                    mLineBuffer[j++] = e1.getX();
+                    mLineBuffer[j++] = e1.getY() * phaseY;
+                    mLineBuffer[j++] = e2.getX();
+                    mLineBuffer[j++] = e2.getY() * phaseY;
+                    indexX++;
+                }
+                if (j > 0) {
+                    trans.pointValuesToPixel(mLineBuffer); // 显示文字
+                    final int size = Math.max((mXBounds.range + 1) * pointsPerEntryPair, pointsPerEntryPair) * 2;
+                    mRenderPaint.setColor(dataSet.getColor());
+                    canvas.drawLines(mLineBuffer, 0, size, mRenderPaint);
                 }
             }
         }
-
-        if (!mRenderPath.isEmpty()) {
-            c.drawPath(mRenderPath, mRenderPaint);
-            mRenderPath.reset();
-        }
+        mRenderPaint.setPathEffect(null);
     }
 
     @Override
@@ -257,5 +319,73 @@ public class CustomLineChartRenderer extends LineChartRenderer {
         trans.pathValueToPixel(cubicPath);
         mBitmapCanvas.drawPath(cubicPath, mRenderPaint);
         mRenderPaint.setPathEffect(null);
+    }
+
+    @Override
+    protected void drawCircles(Canvas c) {
+        mRenderPaint.setStyle(Paint.Style.FILL);
+        float phaseY = mAnimator.getPhaseY();
+        mCirclesBuffer[0] = 0;
+        mCirclesBuffer[1] = 0;
+        List<ILineDataSet> dataSets = mChart.getLineData().getDataSets();
+        for (int i = 0; i < dataSets.size(); i++) {
+            ILineDataSet dataSet = dataSets.get(i);
+            if (!dataSet.isVisible() || !dataSet.isDrawCirclesEnabled() || dataSet.getEntryCount() == 0) {
+                continue;
+            }
+            mCirclePaintInner.setColor(dataSet.getCircleHoleColor());
+            Transformer trans = mChart.getTransformer(dataSet.getAxisDependency());
+            mXBounds.set(mChart, dataSet);
+            float circleRadius = dataSet.getCircleRadius();
+            float circleHoleRadius = dataSet.getCircleHoleRadius();
+            boolean drawCircleHole = dataSet.isDrawCircleHoleEnabled() && circleHoleRadius < circleRadius && circleHoleRadius > 0.f;
+            boolean drawTransparentCircleHole = drawCircleHole && dataSet.getCircleHoleColor() == ColorTemplate.COLOR_NONE;
+
+            DataSetImageCache imageCache;
+
+            if (mImageCaches.containsKey(dataSet)) {
+                imageCache = mImageCaches.get(dataSet);
+            } else {
+                imageCache = new DataSetImageCache();
+                mImageCaches.put(dataSet, imageCache);
+            }
+
+            boolean changeRequired = imageCache.init(dataSet);
+
+            // only fill the cache with new bitmaps if a change is required
+            if (changeRequired) {
+                imageCache.fill(dataSet, drawCircleHole, drawTransparentCircleHole);
+            }
+
+            int boundsRangeCount = mXBounds.range + mXBounds.min;
+
+            for (int j = mXBounds.min; j <= boundsRangeCount; j++) {
+
+                Entry e = dataSet.getEntryForIndex(j);
+
+                if (e == null) break;
+                if (!e.isValid()) {
+                    continue;
+                }
+
+                mCirclesBuffer[0] = e.getX();
+                mCirclesBuffer[1] = e.getY() * phaseY;
+
+                trans.pointValuesToPixel(mCirclesBuffer);
+
+                if (!mViewPortHandler.isInBoundsRight(mCirclesBuffer[0])) {
+                    break;
+                }
+
+                if (!mViewPortHandler.isInBoundsLeft(mCirclesBuffer[0]) || !mViewPortHandler.isInBoundsY(mCirclesBuffer[1])) {
+                    continue;
+                }
+                Bitmap circleBitmap = imageCache.getBitmap(j);
+
+                if (circleBitmap != null) {
+                    c.drawBitmap(circleBitmap, mCirclesBuffer[0] - circleRadius, mCirclesBuffer[1] - circleRadius, null);
+                }
+            }
+        }
     }
 }
